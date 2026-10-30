@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#15344A">
+  <title>长夜之火｜剧本编排与推演样板</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="map">
+  <aside class="app-sidebar">
+    <a class="brand" href="#map" aria-label="返回全剧路径">
+      <span class="brand-mark">火</span>
+      <span><strong>长夜之火</strong><small>舆情处置推演</small></span>
+    </a>
+    <div class="nav-caption">剧本编排台</div>
+    <nav class="main-nav" aria-label="主导航">
+      <a href="#map" data-nav="map" class="active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z"/><path d="M9 3v15M15 6v15"/></svg>
+        <span>全剧路径</span><span class="nav-index">01</span>
+      </a>
+      <a href="#scene" data-nav="scene">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="5" r="2"/><circle cx="18" cy="19" r="2"/><path d="M6 7v5a7 7 0 0 0 7 7h3M6 7v12"/></svg>
+        <span>单场编排</span><span class="nav-index">02</span>
+      </a>
+      <a href="#play" data-nav="play">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4Z"/></svg>
+        <span>互动演练</span><span class="nav-index">03</span>
+      </a>
+      <a href="#review" data-nav="review">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 10h6M9 14h6M9 18h4"/></svg>
+        <span>导控复盘</span><span class="nav-index">04</span>
+      </a>
+    </nav>
+    <div class="sidebar-note">
+      <span class="status-dot"></span>
+      <div><strong>连续分支样板</strong><small>六场 · 五结局 · 三路线</small></div>
+    </div>
+    <div class="sidebar-foot">PROTOTYPE / 01</div>
+  </aside>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow" id="top-eyebrow">SCRIPT BLUEPRINT</div>
+        <h1 id="view-title">全剧路径</h1>
+      </div>
+      <div class="topbar-actions">
+        <span class="local-badge"><span class="status-dot"></span>本地交互样板</span>
+        <button class="btn btn-ghost" id="reset-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          重置样板
+        </button>
+      </div>
+    </header>
+    <main id="main-content" tabindex="-1">
+      <div class="initial-loader"><span></span><p>正在展开剧本路径…</p></div>
+    </main>
+  </div>
+
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <aside class="detail-drawer" id="detail-drawer" aria-label="节点详情" aria-hidden="true"></aside>
+
+  <div class="modal-backdrop" id="reset-modal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="reset-title">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.7 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.7a2 2 0 0 0-3.4 0Z"/></svg>
+      </div>
+      <h2 id="reset-title">重置全部演练进度？</h2>
+      <p>将清除第一、二场的选择、作品、评论与复盘记录，全剧编排内容不受影响。</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="cancel-reset" type="button">保留进度</button>
+        <button class="btn btn-danger" id="confirm-reset" type="button">确认重置</button>
+      </div>
+    </section>
+  </div>
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+
+  <script src="mock.js" defer></script>
+  <script src="api.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>

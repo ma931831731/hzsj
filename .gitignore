@@ -1,0 +1,10 @@
+# 操作系统 / 编辑器临时文件
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+*.swp
+# Excel 临时锁文件（~$ 开头）
+~$*
+
+# WorkBuddy 代理内部数据（非产品代码，不入库）
+.workbuddy/

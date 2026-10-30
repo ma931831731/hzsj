@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>长夜之火｜战时角色互动演练沙盘 Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #0d1520;
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* 顶部 HUD 态势条 */
+    #hud {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 54px;
+      background: linear-gradient(180deg, rgba(13,21,32,0.95) 0%, rgba(13,21,32,0.7) 100%);
+      border-bottom: 1px solid rgba(56, 139, 253, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+    .hud-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .hud-badge {
+      background: #b91c1c;
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      animation: pulse 1.5s infinite;
+    }
+    .hud-stats {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-size: 13px;
+    }
+    .stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.06);
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .stat-val { font-weight: 700; color: #58a6ff; }
+    .stat-val.red { color: #f85149; }
+    .stat-val.green { color: #3fb950; }
+
+    /* 游戏主舞台 Canvas */
+    #game-container {
+      position: absolute;
+      top: 54px; left: 0; right: 0; bottom: 0;
+      cursor: crosshair;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 底部操作与任务指引 Bar */
+    #task-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(18, 26, 38, 0.92);
+      border: 1px solid rgba(56, 139, 253, 0.4);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      border-radius: 12px;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      z-index: 90;
+      backdrop-filter: blur(10px);
+    }
+    .role-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-right: 1px solid rgba(255,255,255,0.15);
+      padding-right: 18px;
+    }
+    .role-avatar {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: #1f6feb;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      border: 2px solid #58a6ff;
+    }
+    .task-content h4 { font-size: 14px; color: #58a6ff; margin-bottom: 2px; }
+    .task-content p { font-size: 12px; color: #8b949e; }
+    .btn-action {
+      background: linear-gradient(180deg, #238636 0%, #2ea043 100%);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(46,160,67,0.4);
+      transition: all 0.2s;
+    }
+    .btn-action:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+    /* 剧情与决策对话弹窗 */
+    #dialog-modal {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(5, 10, 18, 0.65);
+      backdrop-filter: blur(4px);
+      display: none;
+      place-items: center;
+      z-index: 200;
+      animation: fadeIn 0.2s ease-out;
+    }
+    .dialog-card {
+      width: 580px;
+      background: #161f2e;
+      border: 1px solid rgba(56, 139, 253, 0.4);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.8), 0 0 24px rgba(56, 139, 253, 0.15);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .dialog-header {
+      background: rgba(31, 111, 235, 0.15);
+      border-bottom: 1px solid rgba(56, 139, 253, 0.2);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .dialog-title { font-weight: 700; color: #58a6ff; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .dialog-body { padding: 22px 24px; }
+    .npc-statement {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .npc-avatar {
+      width: 48px; height: 48px; border-radius: 8px;
+      background: #30363d;
+      border: 2px solid #8b949e;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .npc-bubble {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 0 10px 10px 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #c9d1d9;
+    }
+    .options-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .option-btn {
+      background: #21262d;
+      border: 1px solid #30363d;
+      color: #c9d1d9;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .option-btn:hover {
+      background: rgba(56, 139, 253, 0.12);
+      border-color: #58a6ff;
+      color: #fff;
+      transform: translateX(4px);
+    }
+    .opt-tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.1); }
+    .opt-tag.optimal { background: rgba(46, 160, 67, 0.25); color: #3fb950; border: 1px solid #3fb950; }
+    .opt-tag.flaw { background: rgba(218, 54, 51, 0.25); color: #f85149; border: 1px solid #f85149; }
+
+    /* 手机通话模拟界面 */
+    #phone-drawer {
+      position: absolute;
+      right: -340px;
+      bottom: 20px;
+      width: 320px;
+      height: 480px;
+      background: #0f1724;
+      border: 2px solid #30363d;
+      border-radius: 28px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+      z-index: 150;
+      transition: right 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #phone-drawer.open { right: 20px; }
+    .phone-notch {
+      width: 100px; height: 16px; background: #000; margin: 0 auto 10px;
+      border-radius: 0 0 10px 10px;
+    }
+    .phone-screen {
+      padding: 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: radial-gradient(circle at center, #1a2333 0%, #0d131f 100%);
+    }
+    .phone-contact { text-align: center; margin-top: 20px; }
+    .contact-avatar {
+      width: 70px; height: 70px; border-radius: 50%;
+      background: #1f6feb; margin: 0 auto 12px;
+      display: grid; place-items: center; font-size: 32px;
+      border: 2px solid #58a6ff;
+    }
+    .phone-actions {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+    .phone-btn {
+      width: 54px; height: 54px; border-radius: 50%; border: none;
+      display: grid; place-items: center; cursor: pointer; font-size: 20px;
+    }
+    .phone-btn.accept { background: #2ea043; color: white; }
+    .phone-btn.reject { background: #da3633; color: white; }
+
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    /* 气泡提示 */
+    .waypoint-indicator {
+      position: absolute;
+      pointer-events: none;
+      color: #58a6ff;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(13,21,32,0.85);
+      border: 1px solid #58a6ff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      transform: translate(-50%, -100%);
+      white-space: nowrap;
+      z-index: 50;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 顶部 HUD 态势条 -->
+  <header id="hud">
+    <div class="hud-title">
+      <span class="hud-badge">突发响应中</span>
+      <span>长夜之火 · 战时舆情指挥演练沙盘</span>
+    </div>
+    <div class="hud-stats">
+      <div class="stat-pill">
+        <span>演练时钟:</span>
+        <span class="stat-val" id="clock-display">18:57:15</span>
+      </div>
+      <div class="stat-pill">
+        <span>公信力 HP:</span>
+        <span class="stat-val green" id="credibility-val">85/100</span>
+      </div>
+      <div class="stat-pill">
+        <span>社会恐慌度:</span>
+        <span class="stat-val red" id="panic-val">28/100</span>
+      </div>
+      <div class="stat-pill">
+        <span>当前阶段:</span>
+        <span class="stat-val" style="color:#e3b341;">第一幕 · 火起破障</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2D/2.5D 沙盘画布 -->
+  <div id="game-container">
+    <canvas id="sandTableCanvas"></canvas>
+  </div>
+
+  <!-- 底部操作导航卡 -->
+  <div id="task-bar">
+    <div class="role-badge">
+      <div class="role-avatar" id="cur-avatar">🏢</div>
+      <div>
+        <div style="font-weight:700; font-size:13px;" id="cur-role-name">物业经理 马经理</div>
+        <div style="font-size:11px; color:#8b949e;">属地处置主体</div>
+      </div>
+    </div>
+    <div class="task-content">
+      <h4 id="task-title">任务：赶赴西门消防通道现场</h4>
+      <p id="task-desc">消控室报警23楼爆燃，西门通道被杂物与SUV堵塞，点击地图西门前往清障！</p>
+    </div>
+    <button class="btn-action" id="phone-toggle-btn" onclick="openPhoneCall('车主挪车电话', '正在呼叫白色SUV车主...')">📱 呼叫挪车</button>
+  </div>
+
+  <!-- 剧情决策弹窗 -->
+  <div id="dialog-modal">
+    <div class="dialog-card">
+      <div class="dialog-header">
+        <div class="dialog-title">🚨 <span id="dlg-title">突发事件抉择</span></div>
+        <span style="font-size:12px; color:#8b949e;">限时决策</span>
+      </div>
+      <div class="dialog-body">
+        <div class="npc-statement">
+          <div class="npc-avatar" id="dlg-npc-avatar">👮</div>
+          <div class="npc-bubble" id="dlg-npc-text">
+            汇报马经理！西门通道被一辆白色SUV违停堵死了，旁边还有老住户堆的一堆废旧沙发家具！消防车马上就到了，怎么办？！
+          </div>
+        </div>
+        <div class="options-box" id="dlg-options">
+          <!-- 动态注入选项 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 手机通话呼叫模拟抽屉 -->
+  <div id="phone-drawer">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+      <div class="phone-contact">
+        <div class="contact-avatar" id="phone-avatar">🚗</div>
+        <h3 id="phone-contact-name" style="color:#fff; margin-bottom:4px;">违停车主 李某</h3>
+        <p id="phone-status" style="font-size:12px; color:#3fb950;">正在呼叫...</p>
+      </div>
+      <div style="background:rgba(255,255,255,0.06); padding:12px; border-radius:10px; font-size:12px; color:#c9d1d9; line-height:1.4;" id="phone-msg">
+        “喂？谁啊？大晚上的催什么催，我在外面吃饭呢马上回来……”
+      </div>
+      <div class="phone-actions">
+        <button class="phone-btn reject" onclick="closePhone()">✕</button>
+        <button class="phone-btn accept" onclick="onCallConfirmed()">✓</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 游戏状态机与角色定义 ---
+    const gameState = {
+      time: "18:57:15",
+      credibility: 85,
+      panic: 28,
+      currentStep: 0,
+      channelBlocked: true,
+      player: {
+        x: 220,
+        y: 340,
+        targetX: 220,
+        targetY: 340,
+        speed: 3.5,
+        name: "马经理",
+        avatar: "🏢"
+      },
+      pointsOfInterest: [
+        { id: "building", name: "3栋2单元(23层起火点)", x: 480, y: 160, color: "#f85149", radius: 24, icon: "🔥", desc: "高层住宅爆燃点" },
+        { id: "west_gate", name: "西门消防通道(堵塞点)", x: 280, y: 460, color: "#e3b341", radius: 20, icon: "🚧", desc: "SUV违停与杂物积压" },
+        { id: "east_gate", name: "东门备用通道", x: 740, y: 380, color: "#58a6ff", radius: 18, icon: "🚪", desc: "云梯车绕行备用路线" },
+        { id: "command_tent", name: "现场临时指挥帐篷", x: 160, y: 490, color: "#3fb950", radius: 22, icon: "⛺", desc: "区指挥部进驻点" },
+        { id: "property_office", name: "消控室 / 物业办公室", x: 220, y: 340, color: "#8b949e", radius: 18, icon: "🏢", desc: "起点" }
+      ]
+    };
+
+    // --- Canvas 沙盘地图渲染引擎 ---
+    const canvas = document.getElementById("sandTableCanvas");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas() {
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    // 绘制沙盘
+    function drawSandTable() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 1. 背景网格与道路
+      ctx.fillStyle = "#0f1726";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 绘制路网网格底纹
+      ctx.strokeStyle = "rgba(56, 139, 253, 0.05)";
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+
+      // 2. 绘制小区主干道 (文昌路 & 小区内环路)
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.lineWidth = 44;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      // 小区内部U型主干道
+      ctx.beginPath();
+      ctx.moveTo(120, 520);
+      ctx.lineTo(280, 460); // 西门
+      ctx.lineTo(480, 320);
+      ctx.lineTo(480, 220); // 3栋前
+      ctx.lineTo(740, 380); // 东门
+      ctx.stroke();
+
+      // 道路中心虚线
+      ctx.strokeStyle = "rgba(227, 179, 65, 0.4)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 3. 绘制建筑楼栋群 (2.5D等轴测线框体块)
+      drawBuildingBlock(420, 100, 120, 100, "3栋高层住宅", true);
+      drawBuildingBlock(620, 120, 100, 80, "2栋住宅", false);
+      drawBuildingBlock(200, 180, 90, 80, "4栋多层", false);
+      drawBuildingBlock(580, 280, 110, 70, "小区中央广场", false, "#132338");
+
+      // 4. 绘制各关键兴趣点 (POIs)
+      gameState.pointsOfInterest.forEach(poi => {
+        // 呼吸光圈
+        ctx.beginPath();
+        ctx.arc(poi.x, poi.y, poi.radius + Math.sin(Date.now() / 250) * 4, 0, Math.PI * 2);
+        ctx.fillStyle = poi.color + "22";
+        ctx.fill();
+
+        // 实体核心
+        ctx.beginPath();
+        ctx.arc(poi.x, poi.y, poi.radius, 0, Math.PI * 2);
+        ctx.fillStyle = poi.color;
+        ctx.fill();
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 图标与文字
+        ctx.font = "14px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(poi.icon, poi.x, poi.y);
+
+        ctx.font = "11px sans-serif";
+        ctx.fillStyle = "#e6edf3";
+        ctx.fillText(poi.name, poi.x, poi.y + poi.radius + 14);
+      });
+
+      // 5. 绘制起火楼顶的火焰特效动画 (粒子与火光)
+      drawFireEffect(480, 120);
+
+      // 6. 绘制角色位置及移动轨迹线
+      if (Math.hypot(gameState.player.targetX - gameState.player.x, gameState.player.targetY - gameState.player.y) > 2) {
+        ctx.strokeStyle = "#58a6ff";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(gameState.player.x, gameState.player.y);
+        ctx.lineTo(gameState.player.targetX, gameState.player.targetY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // 角色主体 (马经理 / 消防员 / 李副区长)
+      ctx.beginPath();
+      ctx.arc(gameState.player.x, gameState.player.y, 16, 0, Math.PI * 2);
+      ctx.fillStyle = "#1f6feb";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+
+      ctx.font = "14px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(gameState.player.avatar, gameState.player.x, gameState.player.y);
+
+      // 角色头顶姓名牌
+      ctx.fillStyle = "rgba(13,21,32,0.85)";
+      ctx.fillRect(gameState.player.x - 28, gameState.player.y - 32, 56, 16);
+      ctx.strokeStyle = "#58a6ff";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(gameState.player.x - 28, gameState.player.y - 32, 56, 16);
+      ctx.font = "10px sans-serif";
+      ctx.fillStyle = "#58a6ff";
+      ctx.fillText(gameState.player.name, gameState.player.x, gameState.player.y - 24);
+
+      // 更新角色物理位置
+      updatePlayerPosition();
+
+      requestAnimationFrame(drawSandTable);
+    }
+
+    // 建筑体块绘制
+    function drawBuildingBlock(x, y, w, h, name, isFire, customColor) {
+      ctx.fillStyle = customColor || (isFire ? "#2d1619" : "#162032");
+      ctx.strokeStyle = isFire ? "#f85149" : "rgba(56, 139, 253, 0.4)";
+      ctx.lineWidth = isFire ? 2 : 1;
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeRect(x, y, w, h);
+
+      ctx.fillStyle = isFire ? "#ff7b72" : "#8b949e";
+      ctx.font = "11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(name, x + w / 2, y + h / 2);
+    }
+
+    // 火焰粒子动画
+    function drawFireEffect(cx, cy) {
+      ctx.save();
+      for (let i = 0; i < 6; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * 20;
+        const fx = cx + Math.cos(angle) * dist;
+        const fy = cy + Math.sin(angle) * dist - 10;
+        const r = Math.random() * 8 + 4;
+        ctx.beginPath();
+        ctx.arc(fx, fy, r, 0, Math.PI * 2);
+        ctx.fillStyle = i % 2 === 0 ? "rgba(248, 81, 73, 0.6)" : "rgba(227, 179, 65, 0.7)";
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 角色移动插值计算
+    function updatePlayerPosition() {
+      const dx = gameState.player.targetX - gameState.player.x;
+      const dy = gameState.player.targetY - gameState.player.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > gameState.player.speed) {
+        gameState.player.x += (dx / dist) * gameState.player.speed;
+        gameState.player.y += (dy / dist) * gameState.player.speed;
+      } else {
+        gameState.player.x = gameState.player.targetX;
+        gameState.player.y = gameState.player.targetY;
+        checkProximityTrigger();
+      }
+    }
+
+    // 点击地图寻路
+    canvas.addEventListener("click", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      gameState.player.targetX = clickX;
+      gameState.player.targetY = clickY;
+    });
+
+    // 空间触发器判定
+    let hasTriggeredWestGate = false;
+    let hasTriggeredCommand = false;
+
+    function checkProximityTrigger() {
+      const westGate = gameState.pointsOfInterest.find(p => p.id === "west_gate");
+      const distToGate = Math.hypot(gameState.player.x - westGate.x, gameState.player.y - westGate.y);
+
+      // 到达西门消防通道
+      if (distToGate < 35 && !hasTriggeredWestGate && gameState.currentStep === 0) {
+        hasTriggeredWestGate = true;
+        triggerWestGateDialog();
+      }
+
+      // 到达指挥帐篷
+      const commandTent = gameState.pointsOfInterest.find(p => p.id === "command_tent");
+      const distToTent = Math.hypot(gameState.player.x - commandTent.x, gameState.player.y - commandTent.y);
+      if (distToTent < 35 && !hasTriggeredCommand && gameState.currentStep === 2) {
+        hasTriggeredCommand = true;
+        triggerCommandDialog();
+      }
+    }
+
+    // --- 剧情与交互弹窗系统 ---
+    function triggerWestGateDialog() {
+      const modal = document.getElementById("dialog-modal");
+      document.getElementById("dlg-title").innerText = "西门通道清障抉择（第一场 D1）";
+      document.getElementById("dlg-npc-avatar").innerText = "👮";
+      document.getElementById("dlg-npc-text").innerHTML = "报告马经理！白色SUV车主电话打了但没人接！消防车警笛已经听到文昌路了，拐不进来！旁边还有堆沙发！怎么处置？！";
+
+      const optsBox = document.getElementById("dlg-options");
+      optsBox.innerHTML = `
+        <button class="option-btn" onclick="onMakeChoice(1)">
+          <div><strong>【最优路线】全力人工清障 + 派人去东门引导绕行</strong><div style="font-size:11px; color:#8b949e; margin-top:2px;">保安协力人工抬走旧沙发，同时派保安骑电动车去文昌路指引云梯车绕行东门</div></div>
+          <span class="opt-tag optimal">规范稳控</span>
+        </button>
+        <button class="option-btn" onclick="onMakeChoice(2)">
+          <div><strong>【失误路线】推诿等待交警执法，阻拦周边业主拍照</strong><div style="font-size:11px; color:#8b949e; margin-top:2px;">表示'物业无权移车'，见业主拿手机录像便大声呵斥'不准拍！'</div></div>
+          <span class="opt-tag flaw">引发冲突</span>
+        </button>
+      `;
+      modal.style.display = "grid";
+    }
+
+    function onMakeChoice(choiceId) {
+      document.getElementById("dialog-modal").style.display = "none";
+      if (choiceId === 1) {
+        gameState.credibility += 5;
+        gameState.channelBlocked = false;
+        alert("【决策生效】：物业保安迅速移开废旧家具，消防通道仅耗时4分钟打通！同时提前将纸质平面图交到消防队长手中！\n公信力 +5！");
+        switchToFirefighter();
+      } else {
+        gameState.credibility -= 20;
+        gameState.panic += 15;
+        alert("【严重失误】：保安与拍照业主发生推搡，'物业抢手机推搡'15秒视频被传上抖音！消防车被堵在门外达15分钟！\n公信力 -20，社会恐慌度 +15！");
+        switchToFirefighter();
+      }
+      updateHUD();
+    }
+
+    // 视角无缝接力切换：切到消防大队长
+    function switchToFirefighter() {
+      gameState.currentStep = 1;
+      gameState.player.name = "陈大队长";
+      gameState.player.avatar = "🚒";
+      gameState.player.x = 280;
+      gameState.player.y = 460;
+      gameState.player.targetX = 480;
+      gameState.player.targetY = 220;
+
+      document.getElementById("cur-avatar").innerText = "🚒";
+      document.getElementById("cur-role-name").innerText = "消防大队 陈大队长";
+      document.getElementById("task-title").innerText = "任务：组织内攻搜救组登楼排查";
+      document.getElementById("task-desc").innerText = "明火扑灭中，立即沿防烟楼梯登楼逐层搜救，排查被困人员！";
+      document.getElementById("phone-toggle-btn").style.display = "none";
+
+      setTimeout(() => {
+        alert("【视角无缝接力】切换至【消防救援大队 陈大队长】！内攻组正在登楼，请点击起火点3栋大楼！");
+      }, 500);
+    }
+
+    // 触发指挥部挂帅决策
+    function triggerCommandDialog() {
+      const modal = document.getElementById("dialog-modal");
+      document.getElementById("dlg-title").innerText = "指挥部战时挂帅（第一场 D2首报决策）";
+      document.getElementById("dlg-npc-avatar").innerText = "👔";
+      document.getElementById("dlg-npc-text").innerHTML = "李区长！火势已初步控制，但网上'云朵儿'的视频点赞破万了，网民在质疑'视频发不出'、'死了多少人'！宣传部和网信请示首报措辞该如何定性？";
+
+      const optsBox = document.getElementById("dlg-options");
+      optsBox.innerHTML = `
+        <button class="option-btn" onclick="onCommandChoice(1)">
+          <div><strong>【严谨定性】'消防全力扑救中，已疏散280余人，暂未接到人员死亡报告'</strong><div style="font-size:11px; color:#8b949e; margin-top:2px;">留有科学余地，同时置顶基站拥塞技术澄清，融媒体发官方现场图</div></div>
+          <span class="opt-tag optimal">教科书式</span>
+        </button>
+        <button class="option-btn" onclick="onCommandChoice(2)">
+          <div><strong>【致命谎言】图省事直接通报'现场无人员伤亡'</strong><div style="font-size:11px; color:#8b949e; margin-top:2px;">为快速平息恐慌，未彻底搜救完就发布无伤亡，并通知平台粗暴删帖</div></div>
+          <span class="opt-tag flaw">信用埋雷</span>
+        </button>
+      `;
+      modal.style.display = "grid";
+    }
+
+    function onCommandChoice(choiceId) {
+      document.getElementById("dialog-modal").style.display = "none";
+      if (choiceId === 1) {
+        gameState.credibility += 10;
+        alert("【演练达成 - 最优结局推进】：\n首报措辞精准严谨，20:08权威发布！公众焦虑得到及时接住，成功锁定【路线一：教科书式闭环】！即将进入第二幕！");
+      } else {
+        gameState.credibility -= 30;
+        gameState.panic += 30;
+        alert("【演练警告 - 严重次生舆情】：\n2小时后抬出遇难者遗体，官方首报被全网当场打脸，'官方造假'冲上热搜，滑入【路线三/四：信任塌方】！");
+      }
+      updateHUD();
+    }
+
+    // 手机抽屉操作
+    function openPhoneCall(name, status) {
+      document.getElementById("phone-contact-name").innerText = name;
+      document.getElementById("phone-status").innerText = status;
+      document.getElementById("phone-drawer").classList.add("open");
+    }
+    function closePhone() {
+      document.getElementById("phone-drawer").classList.remove("open");
+    }
+    function onCallConfirmed() {
+      closePhone();
+      alert("车主李某已接通电话：“我知道了！我马上下来挪车！对不起！”");
+    }
+
+    function updateHUD() {
+      document.getElementById("credibility-val").innerText = gameState.credibility + "/100";
+      document.getElementById("panic-val").innerText = gameState.panic + "/100";
+    }
+
+    // 启动初始渲染
+    drawSandTable();
+  </script>
+</body>
+</html>
